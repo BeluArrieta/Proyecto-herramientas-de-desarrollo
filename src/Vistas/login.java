@@ -1,6 +1,7 @@
 package Vistas;
 
 import Config.Conexion;
+import Modelo.SeguridadContrasena;
 import ModeloDTO.ClienteDTO;
 import Vistas_administrativas.MenuAdmin;
 import java.awt.*;
@@ -138,6 +139,7 @@ public class login extends JFrame {
 
         String sql = """
             SELECT
+                u.contrasena,
                 p.id_persona,
                 p.nombre,
                 p.apellido,
@@ -151,16 +153,14 @@ public class login extends JFrame {
             INNER JOIN persona p ON u.id_persona = p.id_persona
             LEFT JOIN cliente c ON LOWER(TRIM(c.correo)) = LOWER(TRIM(p.correo))
             WHERE TRIM(u.usuario) = ?
-            AND u.contrasena = ?
         """;
 
         try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, usuario);
-            ps.setString(2, contraseña);
 
             ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) {
+            if (rs.next() && SeguridadContrasena.verificar(contraseña, rs.getString("contrasena"))) {
                 intentosFallidos.remove(usuario);
                 finBloqueo.remove(usuario);
 
@@ -187,20 +187,24 @@ public class login extends JFrame {
                 return;
             }
 
-            intentosFallidos.merge(usuario, 1, Integer::sum);
-            int intentos = intentosFallidos.get(usuario);
-
-            if (intentos >= MAX_INTENTOS) {
-                finBloqueo.put(usuario, ahora + BLOQUEO_MS);
-                intentosFallidos.put(usuario, 0);
-                JOptionPane.showMessageDialog(this, "Usuario bloqueado por 15 segundos");
-            } else {
-                JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos");
-            }
+            registrarIntentoFallido(usuario, ahora);
 
             limpiarCampos();
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+        }
+    }
+
+    private void registrarIntentoFallido(String usuario, long ahora) {
+        intentosFallidos.merge(usuario, 1, Integer::sum);
+        int intentos = intentosFallidos.get(usuario);
+
+        if (intentos >= MAX_INTENTOS) {
+            finBloqueo.put(usuario, ahora + BLOQUEO_MS);
+            intentosFallidos.put(usuario, 0);
+            JOptionPane.showMessageDialog(this, "Usuario bloqueado por 15 segundos");
+        } else {
+            JOptionPane.showMessageDialog(this, "Usuario o contraseña incorrectos");
         }
     }
 
