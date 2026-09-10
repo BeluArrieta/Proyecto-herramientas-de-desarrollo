@@ -17,6 +17,8 @@ public class Registro {
             String usuario,
             String contrasena
     ) {
+        String contrasenaCifrada = SeguridadContrasena.hash(contrasena);
+
         String sqlPersona = """
             INSERT INTO persona(
                 id_persona,
@@ -67,7 +69,7 @@ public class Registro {
                 psPersona.executeUpdate();
 
                 psUsuario.setString(1, usuario);
-                psUsuario.setString(2, contrasena);
+                psUsuario.setString(2, contrasenaCifrada);
                 psUsuario.setString(3, idPersona);
                 psUsuario.executeUpdate();
 
@@ -75,7 +77,7 @@ public class Registro {
                 psCliente.setString(2, nombre);
                 psCliente.setString(3, apellido);
                 psCliente.setString(4, telefono);
-                psCliente.setString(5, contrasena);
+                psCliente.setString(5, contrasenaCifrada);
                 psCliente.setString(6, correo);
                 psCliente.executeUpdate();
 

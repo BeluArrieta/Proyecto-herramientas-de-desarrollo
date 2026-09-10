@@ -1,6 +1,7 @@
 package TDD;
 
 import Modelo.Cart;
+import Modelo.SeguridadContrasena;
 import ModeloDTO.ItemCarritoDTO;
 import ModeloDTO.ProductoDTO;
 
@@ -16,6 +17,11 @@ public class PruebasTDD {
         probarCambioDeCantidadActualizaSubtotal();
         probarCarritoVacioLuegoDeLimpiar();
         probarEliminarIndiceInvalidoNoRompeCarrito();
+
+        probarCifradoConsistente();
+        probarCifradoDiferenciado();
+        probarVerificarRechazaClaveIncorrecta();
+        probarVerificarAceptaContrasenaPlanaLegacy();
 
         System.out.println("-----------------------------------------------");
         System.out.println("Pruebas ejecutadas: " + pruebasEjecutadas);
@@ -55,6 +61,30 @@ public class PruebasTDD {
     Cart.removeProducto(5);
 
     assertTrue(Cart.isEmpty(), "Eliminar un indice invalido no debe agregar ni danar el carrito");
+    }
+
+    private static void probarCifradoConsistente() {
+        String hash1 = SeguridadContrasena.hash("claveSegura2026");
+        String hash2 = SeguridadContrasena.hash("claveSegura2026");
+
+        assertTrue(hash1.equals(hash2), "El hash debe ser identico para la misma contrasena");
+    }
+
+    private static void probarCifradoDiferenciado() {
+        String hash1 = SeguridadContrasena.hash("claveUno");
+        String hash2 = SeguridadContrasena.hash("claveDos");
+
+        assertTrue(!hash1.equals(hash2), "El hash debe diferir para contrasenas distintas");
+    }
+
+    private static void probarVerificarRechazaClaveIncorrecta() {
+        String hash = SeguridadContrasena.hash("claveCorrecta");
+
+        assertTrue(!SeguridadContrasena.verificar("claveIncorrecta", hash), "La verificacion debe rechazar una clave incorrecta");
+    }
+
+    private static void probarVerificarAceptaContrasenaPlanaLegacy() {
+        assertTrue(SeguridadContrasena.verificar("clavePlana", "clavePlana"), "La verificacion debe aceptar contrasenas planas de registros antiguos");
     }
 
     private static void assertEquals(double esperado, double obtenido, String mensaje) {
