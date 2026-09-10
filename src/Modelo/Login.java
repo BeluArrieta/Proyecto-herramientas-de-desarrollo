@@ -12,10 +12,9 @@ public class Login {
     public boolean validarLogin(String usuarioIngresado, String contrasenaIngresada) {
 
         String sql = """
-            SELECT *
+            SELECT u.contrasena
             FROM usuario
             WHERE usuario = ?
-            AND contrasena = ?
         """;
 
         try (
@@ -24,11 +23,10 @@ public class Login {
         ) {
 
             ps.setString(1, usuarioIngresado);
-            ps.setString(2, contrasenaIngresada);
 
             ResultSet rs = ps.executeQuery();
 
-            return rs.next();
+            return rs.next() && SeguridadContrasena.verificar(contrasenaIngresada, rs.getString("contrasena"));
 
         } catch (Exception e) {
             System.out.println("Error login: " + e);
