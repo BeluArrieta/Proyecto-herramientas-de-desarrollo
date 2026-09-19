@@ -1,16 +1,25 @@
 package ModeloDAO;
 
-import Config.Conexion;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import Config.ConexionMongo;
+import ModeloDTO.ProductoDTO;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.result.UpdateResult;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.UUID;
+import org.bson.Document;
 
 public class FacturaDAO {
 
-    Conexion cn = new Conexion();
+    private final MongoCollection<Document> coleccionVentas = ConexionMongo.getColeccion("ventas");
 
+    // ==========================================
+    // REGISTRAR VENTA (documento "ventas")
+    // ==========================================
     public String registrarVenta(
             String idPersona,
+            String nombreCliente,
             String tipoDocumento,
             String numeroDocumento,
             String medioPago
@@ -18,31 +27,20 @@ public class FacturaDAO {
 
         String idVenta = UUID.randomUUID().toString();
 
-        String sql = """
-            INSERT INTO venta(
-                id_venta,
-                id_persona,
-                id_tipo_documento,
-                numero_documento,
-                id_medio_pago,
-                fecha_emision
-            )
-            VALUES (?, ?, ?, ?, ?, NOW())
-        """;
+        Document doc = new Document("_id", idVenta)
+                .append("id_persona", idPersona)
+                .append("cliente", nombreCliente)
+                .append("id_tipo_documento", idTipoDocumento(tipoDocumento))
+                .append("tipo_documento", tipoDocumento)
+                .append("numero_documento", numeroDocumento)
+                .append("id_medio_pago", idMedioPago(medioPago))
+                .append("medio_pago", medioPago)
+                .append("fecha_emision", new Date())
+                .append("total", 0.0)
+                .append("detalles", new ArrayList<>());
 
-        try (
-                Connection con = cn.getConexion();
-                PreparedStatement ps = con.prepareStatement(sql)
-        ) {
-            // Se asignan los valores en el orden correcto de los '?'
-            ps.setString(1, idVenta);
-            ps.setString(2, idPersona);
-            ps.setString(3, tipoDocumento);
-            ps.setString(4, numeroDocumento);
-            ps.setString(5, medioPago);
-
-            ps.executeUpdate();
-
+        try {
+            coleccionVentas.insertOne(doc);
             return idVenta;
 
         } catch (Exception e) {
@@ -52,6 +50,9 @@ public class FacturaDAO {
         return null;
     }
 
+    // ==========================================
+    // REGISTRAR DETALLE (agrega item a "detalles" y acumula total)
+    // ==========================================
     public boolean registrarDetalle(
             String idVenta,
             int idProducto,
@@ -60,33 +61,74 @@ public class FacturaDAO {
             double subtotal
     ) {
 
-        String sql = """
-            INSERT INTO detalle_venta(
-                id_venta,
-                id_producto,
-                cantidad,
-                precio_unitario,
-                subtotal
-            )
-            VALUES (?, ?, ?, ?, ?)
-        """;
+        String productoNombre = obtenerNombreProducto(idProducto);
 
-        try (
-                Connection con = cn.getConexion();
-                PreparedStatement ps = con.prepareStatement(sql)
-        ) {
+        Document detalle = new Document("id_producto", idProducto)
+                .append("producto", productoNombre)
+                .append("cantidad", cantidad)
+                .append("precio_unitario", precio)
+                .append("subtotal", subtotal);
 
-            ps.setString(1, idVenta);
-            ps.setInt(2, idProducto);
-            ps.setInt(3, cantidad);
-            ps.setDouble(4, precio);
-            ps.setDouble(5, subtotal);
+        try {
 
-            return ps.executeUpdate() > 0;
+            UpdateResult res = coleccionVentas.updateOne(
+                    Filters.eq("_id", idVenta),
+                    new Document("$push", new Document("detalles", detalle))
+                            .append("$inc", new Document("total", subtotal))
+            );
+
+            return res.getModifiedCount() > 0;
 
         } catch (Exception e) {
             System.out.println("Error detalle venta: " + e);
         }
+
         return false;
+    }
+
+    // ==========================================
+    // BUSCAR PRODUCTO PARA el nombre en el detalle
+    // ==========================================
+    private String obtenerNombreProducto(int idProducto) {
+
+        ProductoDTO producto = new ProductoDAO().buscarPorId(idProducto);
+
+        if (producto != null) {
+            return producto.getNombre();
+        }
+
+        return "Producto " + idProducto;
+    }
+
+    // ==========================================
+    // MAPEO id de tipo de documento
+    // ==========================================
+    private String idTipoDocumento(String tipo) {
+        return "Factura".equalsIgnoreCase(tipo) ? "DOC-02" : "DOC-01";
+    }
+
+    // ==========================================
+    // MAPEO id de medio de pago
+    // ==========================================
+    private String idMedioPago(String medioPago) {
+
+        switch (medioPago) {
+            case "Tarjeta":
+            case "Tarjeta de crédito":
+            case "Visa":
+            case "Mastercard":
+                return "MP002";
+            case "Tarjeta de débito":
+                return "MP003";
+            case "Yape":
+                return "MP004";
+            case "Plin":
+                return "MP005";
+            case "Transferencia":
+            case "Depósito":
+                return "MP006";
+            default:
+                return "MP001";
+        }
     }
 }

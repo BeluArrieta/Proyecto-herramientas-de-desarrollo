@@ -14,10 +14,6 @@ public class ItemCarritoDTO {
         return producto;
     }
 
-    public void setProducto(ProductoDTO producto) {
-        this.producto = producto;
-    }
-
     public int getCantidad() {
         return cantidad;
     }

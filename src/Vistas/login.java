@@ -1,11 +1,9 @@
 package Vistas;
 
-import Config.Conexion;
-import Modelo.SeguridadContrasena;
+import Modelo.Login;
 import ModeloDTO.ClienteDTO;
 import Vistas_administrativas.MenuAdmin;
 import java.awt.*;
-import java.sql.*;
 import java.util.HashMap;
 import java.util.Map;
 import javax.swing.*;
@@ -137,62 +135,38 @@ public class login extends JFrame {
             return;
         }
 
-        String sql = """
-            SELECT
-                u.contrasena,
-                p.id_persona,
-                p.nombre,
-                p.apellido,
-                p.correo,
-                p.telefono,
-                CASE
-                    WHEN c.id_cliente IS NULL THEN 'ADMIN'
-                    ELSE 'CLIENTE'
-                END AS tipo_usuario
-            FROM usuario u
-            INNER JOIN persona p ON u.id_persona = p.id_persona
-            LEFT JOIN cliente c ON LOWER(TRIM(c.correo)) = LOWER(TRIM(p.correo))
-            WHERE TRIM(u.usuario) = ?
-        """;
+        Map<String, String> datos = new Login().autenticar(usuario, contraseña);
 
-        try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, usuario);
+        if (datos != null) {
+            intentosFallidos.remove(usuario);
+            finBloqueo.remove(usuario);
 
-            ResultSet rs = ps.executeQuery();
+            String tipoUsuario = datos.get("tipo_usuario");
+            String nombreCompleto = datos.get("nombre") + " " + datos.get("apellido");
 
-            if (rs.next() && SeguridadContrasena.verificar(contraseña, rs.getString("contrasena"))) {
-                intentosFallidos.remove(usuario);
-                finBloqueo.remove(usuario);
-
-                String tipoUsuario = rs.getString("tipo_usuario");
-                String nombreCompleto = rs.getString("nombre") + " " + rs.getString("apellido");
-
-                if ("ADMIN".equals(tipoUsuario)) {
-                    JOptionPane.showMessageDialog(this, "Bienvenido administrador " + rs.getString("nombre"));
-                    new MenuAdmin(nombreCompleto).setVisible(true);
-                    dispose();
-                    return;
-                }
-
-                ClienteDTO cliente = new ClienteDTO();
-                cliente.setIdCliente(rs.getString("id_persona"));
-                cliente.setNombre(rs.getString("nombre"));
-                cliente.setApellido(rs.getString("apellido"));
-                cliente.setCorreo(rs.getString("correo"));
-                cliente.setTelefono(rs.getString("telefono"));
-
-                JOptionPane.showMessageDialog(this, "Bienvenido " + cliente.getNombre());
-                new Menu(cliente).setVisible(true);
+            if ("ADMIN".equals(tipoUsuario)) {
+                JOptionPane.showMessageDialog(this, "Bienvenido administrador " + datos.get("nombre"));
+                new MenuAdmin(nombreCompleto).setVisible(true);
                 dispose();
                 return;
             }
 
-            registrarIntentoFallido(usuario, ahora);
+            ClienteDTO cliente = new ClienteDTO();
+            cliente.setIdCliente(datos.get("id_persona"));
+            cliente.setNombre(datos.get("nombre"));
+            cliente.setApellido(datos.get("apellido"));
+            cliente.setCorreo(datos.get("correo"));
+            cliente.setTelefono(datos.get("telefono"));
 
-            limpiarCampos();
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error: " + e.getMessage());
+            JOptionPane.showMessageDialog(this, "Bienvenido " + cliente.getNombre());
+            new Menu(cliente).setVisible(true);
+            dispose();
+            return;
         }
+
+        registrarIntentoFallido(usuario, ahora);
+
+        limpiarCampos();
     }
 
     private void registrarIntentoFallido(String usuario, long ahora) {

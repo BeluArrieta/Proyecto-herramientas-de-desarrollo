@@ -1,6 +1,5 @@
 package ModeloDTO;
 
-import java.sql.Timestamp;
 import java.util.Date;
 import java.util.List;
 
@@ -11,23 +10,6 @@ public class BoletaDTO {
     private Date fechaEmision;
     private ClienteDTO cliente;
     private List<VentaDTO> ventas;
-
-    public BoletaDTO(Long idBoleta, Date fechaEmision,
-            ClienteDTO cliente, List<VentaDTO> ventas) {
-        this.idBoleta = idBoleta;
-        this.numeroDocumento = idBoleta != null ? "BOL-" + String.format("%06d", idBoleta) : "BOL-PENDIENTE";
-        this.fechaEmision = fechaEmision;
-        this.cliente = cliente;
-        this.ventas = ventas;
-    }
-
-    public BoletaDTO(String idBoleta, Timestamp timestamp,
-            ClienteDTO cliente, List<VentaDTO> ventas) {
-        asignarNumero(idBoleta);
-        this.fechaEmision = new Date(timestamp.getTime());
-        this.cliente = cliente;
-        this.ventas = ventas;
-    }
 
     public BoletaDTO(String idBoleta, Date fechaEmision,
             ClienteDTO cliente, List<VentaDTO> ventas) {
@@ -44,10 +26,6 @@ public class BoletaDTO {
         } catch (Exception e) {
             this.idBoleta = null;
         }
-    }
-
-    public Long getIdBoleta() {
-        return idBoleta;
     }
 
     public String getNumeroDocumento() {

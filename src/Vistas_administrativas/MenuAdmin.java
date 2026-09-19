@@ -59,9 +59,13 @@ public class MenuAdmin extends JFrame {
         JPanel contenedores = new JPanel(new GridLayout(1, 3, 18, 18));
         contenedores.setOpaque(false);
 
-        contenedores.add(contenedorTotalClientes());
-        contenedores.add(contenedorProductoMasVendido());
-        contenedores.add(contenedorProductosAgotados());
+        lblTotalClientes = valor(String.valueOf(obtenerTotalClientes()), AdminTheme.bold(24), AdminTheme.PRIMARIO);
+        lblProductoMasVendido = valor(obtenerProductoMasVendidoMes(), AdminTheme.bold(18), AdminTheme.ACENTO);
+        lblProductosAgotados = valor(String.valueOf(obtenerProductosAgotados()), AdminTheme.bold(24), Color.RED);
+
+        contenedores.add(contenedor("Total clientes", lblTotalClientes, "Clientes registrados en el sistema"));
+        contenedores.add(contenedor("Producto más vendido", lblProductoMasVendido, "Producto con más ventas este mes"));
+        contenedores.add(contenedor("Productos agotados", lblProductosAgotados, "Alerta de productos sin stock"));
 
         parteSuperior.add(contenedores, BorderLayout.CENTER);
         root.add(parteSuperior, BorderLayout.NORTH);
@@ -98,70 +102,27 @@ public class MenuAdmin extends JFrame {
         setContentPane(root);
     }
 
-    private JPanel contenedorTotalClientes() {
-        JPanel panel = AdminTheme.card();
-        panel.setLayout(new BorderLayout(8, 8));
-
-        JLabel lblTitulo = new JLabel("Total clientes");
-        lblTitulo.setFont(AdminTheme.bold(14));
-        lblTitulo.setForeground(Color.DARK_GRAY);
-
-        lblTotalClientes = new JLabel(String.valueOf(obtenerTotalClientes()));
-        lblTotalClientes.setFont(AdminTheme.bold(24));
-        lblTotalClientes.setForeground(AdminTheme.PRIMARIO);
-
-        JLabel lblDescripcion = new JLabel("Clientes registrados en el sistema");
-        lblDescripcion.setFont(AdminTheme.texto(12));
-        lblDescripcion.setForeground(Color.GRAY);
-
-        panel.add(lblTitulo, BorderLayout.NORTH);
-        panel.add(lblTotalClientes, BorderLayout.CENTER);
-        panel.add(lblDescripcion, BorderLayout.SOUTH);
-
-        return panel;
+    private JLabel valor(String texto, Font fuente, Color color) {
+        JLabel lbl = new JLabel(texto);
+        lbl.setFont(fuente);
+        lbl.setForeground(color);
+        return lbl;
     }
 
-    private JPanel contenedorProductoMasVendido() {
+    private JPanel contenedor(String titulo, JLabel lblValor, String descripcion) {
         JPanel panel = AdminTheme.card();
         panel.setLayout(new BorderLayout(8, 8));
 
-        JLabel lblTitulo = new JLabel("Producto más vendido");
+        JLabel lblTitulo = new JLabel(titulo);
         lblTitulo.setFont(AdminTheme.bold(14));
         lblTitulo.setForeground(Color.DARK_GRAY);
 
-        lblProductoMasVendido = new JLabel(obtenerProductoMasVendidoMes());
-        lblProductoMasVendido.setFont(AdminTheme.bold(18));
-        lblProductoMasVendido.setForeground(AdminTheme.ACENTO);
-
-        JLabel lblDescripcion = new JLabel("Producto con más ventas este mes");
+        JLabel lblDescripcion = new JLabel(descripcion);
         lblDescripcion.setFont(AdminTheme.texto(12));
         lblDescripcion.setForeground(Color.GRAY);
 
         panel.add(lblTitulo, BorderLayout.NORTH);
-        panel.add(lblProductoMasVendido, BorderLayout.CENTER);
-        panel.add(lblDescripcion, BorderLayout.SOUTH);
-
-        return panel;
-    }
-
-    private JPanel contenedorProductosAgotados() {
-        JPanel panel = AdminTheme.card();
-        panel.setLayout(new BorderLayout(8, 8));
-
-        JLabel lblTitulo = new JLabel("Productos agotados");
-        lblTitulo.setFont(AdminTheme.bold(14));
-        lblTitulo.setForeground(Color.DARK_GRAY);
-
-        lblProductosAgotados = new JLabel(String.valueOf(obtenerProductosAgotados()));
-        lblProductosAgotados.setFont(AdminTheme.bold(24));
-        lblProductosAgotados.setForeground(Color.RED);
-
-        JLabel lblDescripcion = new JLabel("Alerta de productos sin stock");
-        lblDescripcion.setFont(AdminTheme.texto(12));
-        lblDescripcion.setForeground(Color.GRAY);
-
-        panel.add(lblTitulo, BorderLayout.NORTH);
-        panel.add(lblProductosAgotados, BorderLayout.CENTER);
+        panel.add(lblValor, BorderLayout.CENTER);
         panel.add(lblDescripcion, BorderLayout.SOUTH);
 
         return panel;

@@ -1,40 +1,52 @@
 package ModeloDAO;
 
-import Config.Conexion;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import Config.ConexionMongo;
+import com.mongodb.client.MongoCollection;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.List;
+import org.bson.Document;
 
 public class VentaDAO {
 
-    Conexion cn = new Conexion();
+    private final MongoCollection<Document> coleccion = ConexionMongo.getColeccion("ventas");
 
+    // ==========================================
+    // PRODUCTO MÁS VENDIDO DEL MES
+    // Usa agregación: desarma detalles -> agrupa por producto
+    // ==========================================
     public String obtenerProductoMasVendidoMes() {
 
-        String sql = """
-            SELECT p.nombre, SUM(dv.cantidad) AS total_vendido
-            FROM detalle_venta dv
-            INNER JOIN producto p ON dv.id_producto = p.id_producto
-            INNER JOIN venta v ON dv.id_venta = v.id_venta
-            WHERE EXTRACT(MONTH FROM v.fecha_emision) = EXTRACT(MONTH FROM CURRENT_DATE)
-            AND EXTRACT(YEAR FROM v.fecha_emision) = EXTRACT(YEAR FROM CURRENT_DATE)
-            GROUP BY p.nombre
-            ORDER BY total_vendido DESC
-            LIMIT 1
-        """;
+        LocalDate inicio = LocalDate.now().withDayOfMonth(1);
+        LocalDate fin = inicio.plusMonths(1);
 
-        try (
-                Connection con = cn.getConexion();
-                PreparedStatement ps = con.prepareStatement(sql);
-                ResultSet rs = ps.executeQuery()
-        ) {
+        Date fechaInicio = Date.from(inicio.atStartOfDay(ZoneId.systemDefault()).toInstant());
+        Date fechaFin = Date.from(fin.atStartOfDay(ZoneId.systemDefault()).toInstant());
 
-            if (rs.next()) {
-                return rs.getString("nombre");
+        List<Document> pipeline = List.of(
+                new Document("$match",
+                        new Document("fecha_emision",
+                                new Document("$gte", fechaInicio)
+                                        .append("$lt", fechaFin))),
+                new Document("$unwind", "$detalles"),
+                new Document("$group",
+                        new Document("_id", "$detalles.id_producto")
+                                .append("nombre", new Document("$first", "$detalles.producto"))
+                                .append("total", new Document("$sum", "$detalles.cantidad"))),
+                new Document("$sort", new Document("total", -1)),
+                new Document("$limit", 1)
+        );
+
+        try {
+            Document doc = coleccion.aggregate(pipeline).first();
+
+            if (doc != null) {
+                return doc.getString("nombre");
             }
 
         } catch (Exception e) {
-            System.out.println("Error obtener producto mas vendido del mes: " + e);
+            System.out.println("Error producto mas vendido mes: " + e);
         }
 
         return "Sin ventas";

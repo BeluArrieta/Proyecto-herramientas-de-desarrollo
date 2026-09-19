@@ -7,34 +7,11 @@ public class ClienteDTO {
     private String apellido;
     private String telefono;
     private String correo;
-    private String password;
 
     // =========================
     // CONSTRUCTOR VACÍO
     // =========================
     public ClienteDTO() {
-    }
-
-    // =========================
-    // CONSTRUCTOR COMPLETO
-    // =========================
-    public ClienteDTO(String idCliente, String nombre, String apellido,
-                      String telefono, String correo, String password) {
-        this.idCliente = idCliente;
-        this.nombre = nombre;
-        this.apellido = apellido;
-        this.telefono = telefono;
-        this.correo = correo;
-        this.password = password;
-    }
-
-    // =========================
-    // CONSTRUCTOR PARA BOLETA / CONSULTAS
-    // =========================
-    public ClienteDTO(String idCliente, String nombre, String apellido) {
-        this.idCliente = idCliente;
-        this.nombre = nombre;
-        this.apellido = apellido;
     }
 
     // =========================
@@ -78,13 +55,5 @@ public class ClienteDTO {
 
     public void setCorreo(String correo) {
         this.correo = correo;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
     }
 }

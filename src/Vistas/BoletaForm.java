@@ -1,6 +1,7 @@
 package Vistas;
 
 import Modelo.Cart;
+import Modelo.Moneda;
 import ModeloDAO.FacturaDAO;
 import ModeloDAO.ProductoDAO;
 import ModeloDTO.BoletaDTO;
@@ -23,8 +24,6 @@ import java.util.List;
 
 public class BoletaForm extends JFrame {
     private final ClienteDTO cliente;
-    private BoletaDTO boleta;
-    private FacturaDTO factura;
     private final SimpleDateFormat fFecha = new SimpleDateFormat("dd/MM/yyyy");
     private final SimpleDateFormat fHora = new SimpleDateFormat("HH:mm:ss");
 
@@ -36,32 +35,8 @@ public class BoletaForm extends JFrame {
 
     public BoletaForm(ClienteDTO cliente) {
         this.cliente = cliente;
-        this.boleta = null;
-        this.factura = null;
         initComponents();
         cargarCarrito();
-    }
-
-    public BoletaForm(ClienteDTO cliente, BoletaDTO boleta) {
-        this.cliente = cliente;
-        this.boleta = boleta;
-        this.factura = null;
-        initComponents();
-        cmbTipo.setSelectedItem("Boleta");
-        cmbTipo.setEnabled(false);
-        cmbMedioPago.setEnabled(false);
-        if (boleta != null) cargarDetalle(boleta.getIdBoleta().toString(), boleta.getFechaEmision(), boleta.getVentas());
-    }
-
-    public BoletaForm(ClienteDTO cliente, FacturaDTO factura) {
-        this.cliente = cliente;
-        this.factura = factura;
-        this.boleta = null;
-        initComponents();
-        cmbTipo.setSelectedItem("Factura");
-        cmbTipo.setEnabled(false);
-        cmbMedioPago.setEnabled(false);
-        if (factura != null) cargarDetalle(factura.getIdFactura(), factura.getFechaEmision(), factura.getVentas());
     }
 
     private void cargarCarrito() {
@@ -74,30 +49,10 @@ public class BoletaForm extends JFrame {
         };
         for (ItemCarritoDTO item : Cart.getItems()) {
             ProductoDTO p = item.getProducto();
-            model.addRow(new Object[]{p.getIdProducto(), p.getNombre(), String.format("S/ %.2f", p.getPrecio()), item.getCantidad(), String.format("S/ %.2f", item.getSubtotal())});
+            model.addRow(new Object[]{p.getIdProducto(), p.getNombre(), Moneda.formatear(p.getPrecio()), item.getCantidad(), Moneda.formatear(item.getSubtotal())});
         }
         tblDetalle.setModel(model);
-        lblTotal.setText(String.format("Total: S/ %.2f", Cart.getTotal()));
-    }
-
-    private void cargarDetalle(String id, Date fecha, List<VentaDTO> ventas) {
-        lblClienteValor.setText(cliente != null ? cliente.getNombre() + " " + cliente.getApellido() : "Cliente no identificado");
-        lblNumValor.setText(id);
-        lblFechaValor.setText(fFecha.format(fecha));
-        lblHoraValor.setText(fHora.format(fecha));
-        DefaultTableModel model = new DefaultTableModel(new Object[][]{}, new String[]{"Código", "Producto", "P. Unit.", "Cantidad", "Subtotal"}) {
-            public boolean isCellEditable(int row, int column) { return false; }
-        };
-        double total = 0;
-        if (ventas != null) {
-            for (VentaDTO v : ventas) {
-                double subtotal = v.getPrecioUnitario() * v.getCantidad();
-                model.addRow(new Object[]{v.getProductoId(), v.getProducto().getNombre(), String.format("S/ %.2f", v.getPrecioUnitario()), v.getCantidad(), String.format("S/ %.2f", subtotal)});
-                total += subtotal;
-            }
-        }
-        tblDetalle.setModel(model);
-        lblTotal.setText(String.format("Total: S/ %.2f", total));
+        lblTotal.setText("Total: " + Moneda.formatear(Cart.getTotal()));
     }
 
     private void registrarComprobante() {
@@ -112,10 +67,7 @@ public class BoletaForm extends JFrame {
         }
 
         String tipoDocumento = cmbTipo.getSelectedItem().toString();
-        String idTipoDocumento = tipoDocumento.equals("Boleta") ? "TD001" : "TD002";
-
         String medioPago = cmbMedioPago.getSelectedItem().toString();
-        String idMedioPago = obtenerIdMedioPago(medioPago);
 
         String serie = tipoDocumento.equals("Boleta") ? "B001-" : "F001-";
         String numeroDocumento = serie + System.currentTimeMillis();
@@ -124,7 +76,7 @@ public class BoletaForm extends JFrame {
                 this,
                 "Tipo de comprobante: " + tipoDocumento
                         + "\nMedio de pago: " + medioPago
-                        + "\nTotal: " + String.format("S/ %.2f", Cart.getTotal())
+                        + "\nTotal: " + Moneda.formatear(Cart.getTotal())
                         + "\n\n¿Desea registrar la compra?",
                 "Confirmar comprobante",
                 JOptionPane.YES_NO_OPTION
@@ -140,9 +92,10 @@ public class BoletaForm extends JFrame {
 
             String idVenta = facturaDAO.registrarVenta(
                     cliente.getIdCliente(),
-                    idTipoDocumento,
+                    cliente.getNombre() + " " + cliente.getApellido(),
+                    tipoDocumento,
                     numeroDocumento,
-                    idMedioPago
+                    medioPago
             );
 
             for (ItemCarritoDTO item : Cart.getItems()) {
@@ -250,43 +203,6 @@ public class BoletaForm extends JFrame {
         }
 
         return ventas;
-    }
-
-    private String obtenerIdMedioPago(String medioPago) {
-        switch (medioPago) {
-            case "Efectivo":
-                return "MP001";
-            case "Tarjeta de crédito":
-                return "MP002";
-            case "Tarjeta de débito":
-                return "MP003";
-            case "Yape":
-                return "MP004";
-            case "Plin":
-                return "MP005";
-            case "Transferencia":
-                return "MP006";
-            case "Pago contra entrega":
-                return "MP007";
-            case "Billetera digital":
-                return "MP008";
-            case "Visa":
-                return "MP009";
-            case "Mastercard":
-                return "MP010";
-            case "American Express":
-                return "MP011";
-            case "Depósito":
-                return "MP012";
-            case "Crédito empresarial":
-                return "MP013";
-            case "Pago mixto":
-                return "MP014";
-            case "PayPal":
-                return "MP015";
-            default:
-                return "MP001";
-        }
     }
 
     private void volver() {

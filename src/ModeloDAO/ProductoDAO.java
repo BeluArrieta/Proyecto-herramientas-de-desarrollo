@@ -1,49 +1,112 @@
 package ModeloDAO;
 
-import Config.Conexion;
+import Config.ConexionMongo;
 import ModeloDTO.ProductoDTO;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import com.mongodb.client.result.UpdateResult;
 import java.util.ArrayList;
+import org.bson.Document;
 
 public class ProductoDAO {
 
-    Conexion cn = new Conexion();
-    private ArrayList<ProductoDTO> productosCatalogo;
+    private final MongoCollection<Document> coleccion = ConexionMongo.getColeccion("productos");
 
-    public ResultSet listarProductos() {
+    // =========================
+    // LISTAR TODO (catálogo)
+    // =========================
+    public ArrayList<ProductoDTO> listarTodo() {
 
-        String sql = "SELECT * FROM producto ORDER BY nombre";
+        ArrayList<ProductoDTO> lista = new ArrayList<>();
 
         try {
-            Connection con = cn.getConexion();
-            PreparedStatement ps = con.prepareStatement(sql);
-
-            return ps.executeQuery();
-
+            for (Document doc : coleccion.find().sort(new Document("nombre", 1))) {
+                lista.add(toProducto(doc));
+            }
         } catch (Exception e) {
             System.out.println("Error listar productos: " + e);
+        }
+
+        return lista;
+    }
+
+    // =========================
+    // BUSCAR POR ID
+    // =========================
+    public ProductoDTO buscarPorId(int idProducto) {
+
+        try {
+            Document doc = coleccion.find(Filters.eq("_id", idProducto)).first();
+
+            if (doc != null) {
+                return toProducto(doc);
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error buscar producto: " + e);
         }
 
         return null;
     }
 
+    // =========================
+    // AGREGAR PRODUCTO (admin)
+    // =========================
+    public boolean agregar(ProductoDTO producto) {
+
+        try {
+            Document doc = new Document("_id", producto.getIdProducto())
+                    .append("nombre", producto.getNombre())
+                    .append("stock", producto.getStock())
+                    .append("precio", producto.getPrecio())
+                    .append("categoria", producto.getCategoria());
+
+            coleccion.insertOne(doc);
+            return true;
+
+        } catch (Exception e) {
+            System.out.println("Error agregar producto: " + e);
+        }
+
+        return false;
+    }
+
+    // =========================
+    // ACTUALIZAR PRODUCTO (admin)
+    // =========================
+    public boolean actualizar(ProductoDTO producto) {
+
+        try {
+            UpdateResult res = coleccion.updateOne(
+                    Filters.eq("_id", producto.getIdProducto()),
+                    new Document("$set",
+                            new Document("nombre", producto.getNombre())
+                                    .append("stock", producto.getStock())
+                                    .append("precio", producto.getPrecio())
+                                    .append("categoria", producto.getCategoria()))
+            );
+
+            return res.getModifiedCount() > 0;
+
+        } catch (Exception e) {
+            System.out.println("Error actualizar producto: " + e);
+        }
+
+        return false;
+    }
+
+    // =========================
+    // ACTUALIZAR STOCK
+    // =========================
     public boolean actualizarStock(int idProducto, int cantidadComprada) {
 
-        String sql = """
-            UPDATE producto
-            SET stock = stock - ?
-            WHERE id_producto = ?
-        """;
+        try {
+            UpdateResult res = coleccion.updateOne(
+                    Filters.eq("_id", idProducto),
+                    new Document("$inc", new Document("stock", -cantidadComprada))
+            );
 
-        try (
-                Connection con = cn.getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, cantidadComprada);
-            ps.setInt(2, idProducto);
-
-            return ps.executeUpdate() > 0;
+            return res.getModifiedCount() > 0;
 
         } catch (Exception e) {
             System.out.println("Error actualizar stock: " + e);
@@ -52,81 +115,34 @@ public class ProductoDAO {
         return false;
     }
 
-    public ProductoDTO buscarPorId(int idProducto) {
-
-        String sql = "SELECT * FROM producto WHERE id_producto = ?";
-
-        ProductoDTO producto = null;
-
-        try (
-                Connection con = cn.getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setInt(1, idProducto);
-
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-
-                producto = new ProductoDTO();
-
-                producto.setIdProducto(rs.getInt("id_producto"));
-                producto.setNombre(rs.getString("nombre"));
-                producto.setStock(rs.getInt("stock"));
-                producto.setPrecio(rs.getDouble("precio"));
-                producto.setCategoria(rs.getString("categoria"));
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error buscar producto: " + e);
-        }
-
-        return producto;
-    }
-
-    public ArrayList<ProductoDTO> listarTodo() {
-
-        ArrayList<ProductoDTO> lista = new ArrayList<>();
-
-        String sql = "SELECT * FROM producto ORDER BY nombre";
-
-        try (
-                Connection con = cn.getConexion(); PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-
-            while (rs.next()) {
-
-                ProductoDTO p = new ProductoDTO();
-
-                p.setIdProducto(rs.getInt("id_producto"));
-                p.setNombre(rs.getString("nombre"));
-                p.setStock(rs.getInt("stock"));
-                p.setPrecio(rs.getDouble("precio"));
-                p.setCategoria(rs.getString("categoria"));
-
-                lista.add(p);
-            }
-
-        } catch (Exception e) {
-            System.out.println("Error listar productos: " + e);
-        }
-
-        return lista;
-    }
-
+    // =========================
+    // OBTENER PRODUCTOS AGOTADOS
+    // =========================
     public int obtenerProductosAgotados() {
 
-        String sql = "SELECT COUNT(*) AS total FROM producto WHERE stock <= 0";
-
-        try (
-                Connection con = cn.getConexion(); PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-
-            if (rs.next()) {
-                return rs.getInt("total");
-            }
-
+        try {
+            return (int) coleccion.countDocuments(new Document("stock", new Document("$lte", 0)));
         } catch (Exception e) {
-            System.out.println("Error obtener productos agotados: " + e);
+            System.out.println("Error productos agotados: " + e);
         }
 
         return 0;
+    }
+
+    // =========================
+    // MAPEO Document -> ProductoDTO
+    // =========================
+    private ProductoDTO toProducto(Document doc) {
+
+        ProductoDTO p = new ProductoDTO();
+
+        Object id = doc.get("_id");
+        p.setIdProducto(id instanceof Number ? ((Number) id).intValue() : 0);
+        p.setNombre(doc.getString("nombre"));
+        p.setStock(doc.getInteger("stock", 0));
+        p.setPrecio(doc.getDouble("precio") != null ? doc.getDouble("precio") : 0.0);
+        p.setCategoria(doc.getString("categoria"));
+
+        return p;
     }
 }

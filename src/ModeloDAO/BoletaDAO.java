@@ -1,91 +1,32 @@
 package ModeloDAO;
 
-import Config.Conexion;
-import java.sql.*;
+import Config.ConexionMongo;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import org.bson.Document;
 
 public class BoletaDAO {
 
-    Conexion cn = new Conexion();
+    private final MongoCollection<Document> coleccion = ConexionMongo.getColeccion("ventas");
 
-    public ResultSet obtenerVenta(String idVenta) {
-
-        String sql = """
-            SELECT
-                v.id_venta,
-                v.fecha_emision,
-                p.nombre,
-                p.apellido,
-                td.nombre AS documento,
-                mp.descripcion AS pago
-            FROM venta v
-            INNER JOIN persona p
-                ON v.id_persona = p.id_persona
-            INNER JOIN tipo_documento td
-                ON v.id_tipo_documento = td.id_documento
-            INNER JOIN medio_pago mp
-                ON v.id_medio_pago = mp.id_medio_pago
-            WHERE v.id_venta = ?
-        """;
-
-        try {
-
-            Connection con = cn.getConexion();
-            PreparedStatement ps = con.prepareStatement(sql);
-
-            ps.setString(1, idVenta);
-
-            return ps.executeQuery();
-
-        } catch (Exception e) {
-            System.out.println("Error obtener venta: " + e);
-        }
-
-        return null;
-    }
-
+    // ==========================================
+    // HISTORIAL DE COMPRAS DE UN CLIENTE
+    // ==========================================
     public ArrayList<Object[]> obtenerHistorialCompras(String idCliente) {
 
         ArrayList<Object[]> lista = new ArrayList<>();
 
-        String sql = """
-        SELECT
-            v.id_venta,
-            v.fecha_emision,
-            td.nombre,
-            p.nombre,
-            dv.cantidad,
-            dv.precio_unitario,
-            dv.subtotal
-        FROM venta v
-        INNER JOIN detalle_venta dv
-            ON v.id_venta = dv.id_venta
-        INNER JOIN producto p
-            ON dv.id_producto = p.id_producto
-        INNER JOIN tipo_documento td
-            ON v.id_tipo_documento = td.id_documento
-        WHERE v.id_persona = ?
-        ORDER BY v.fecha_emision DESC
-    """;
+        try {
+            List<Document> ventas = coleccion
+                    .find(Filters.eq("id_persona", idCliente))
+                    .sort(new Document("fecha_emision", -1))
+                    .into(new ArrayList<>());
 
-        try (
-                Connection con = cn.getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-
-            ps.setString(1, idCliente);
-
-            ResultSet rs = ps.executeQuery();
-
-            while (rs.next()) {
-
-                lista.add(new Object[]{
-                    rs.getString(1),
-                    rs.getTimestamp(2),
-                    rs.getString(3),
-                    rs.getString(4),
-                    rs.getInt(5),
-                    "S/ " + rs.getDouble(6),
-                    "S/ " + rs.getDouble(7)
-                });
+            for (Document venta : ventas) {
+                lista.addAll(aplanarVenta(venta));
             }
 
         } catch (Exception e) {
@@ -93,5 +34,98 @@ public class BoletaDAO {
         }
 
         return lista;
+    }
+
+    // ==========================================
+    // HISTORIAL GENERAL DE TODOS LOS CLIENTES
+    // ==========================================
+    public ArrayList<Object[]> obtenerHistorialGeneral(String filtro) {
+
+        ArrayList<Object[]> lista = new ArrayList<>();
+
+        try {
+            List<Document> ventas = coleccion
+                    .find()
+                    .sort(new Document("fecha_emision", -1))
+                    .into(new ArrayList<>());
+
+            for (Document venta : ventas) {
+
+                String cliente = venta.getString("cliente");
+                String documento = venta.getString("tipo_documento");
+                String medioPago = venta.getString("medio_pago");
+                String id = venta.getString("_id");
+
+                for (Document detalle : venta.getList("detalles", Document.class)) {
+
+                    String producto = detalle.getString("producto");
+
+                    if (coincideFiltro(filtro, id, cliente, documento, medioPago, producto)) {
+                        lista.add(new Object[]{
+                            id,
+                            venta.getDate("fecha_emision"),
+                            cliente,
+                            documento,
+                            medioPago,
+                            producto,
+                            detalle.getInteger("cantidad"),
+                            detalle.getDouble("precio_unitario"),
+                            detalle.getDouble("subtotal")
+                        });
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            System.out.println("Error historial general: " + e);
+        }
+
+        return lista;
+    }
+
+    // ==========================================
+    // APLANA UNA VENTA EN FILAS (una por producto)
+    // ==========================================
+    private List<Object[]> aplanarVenta(Document venta) {
+
+        List<Object[]> filas = new ArrayList<>();
+
+        String id = venta.getString("_id");
+        Date fecha = venta.getDate("fecha_emision");
+        String documento = venta.getString("tipo_documento");
+
+        for (Document detalle : venta.getList("detalles", Document.class)) {
+            filas.add(new Object[]{
+                id,
+                fecha,
+                documento,
+                detalle.getString("producto"),
+                detalle.getInteger("cantidad"),
+                detalle.getDouble("precio_unitario"),
+                detalle.getDouble("subtotal")
+            });
+        }
+
+        return filas;
+    }
+
+    // ==========================================
+    // FILTRO POR TEXTO (insensible a mayúsculas)
+    // ==========================================
+    private boolean coincideFiltro(String filtro, String... campos) {
+
+        if (filtro == null || filtro.trim().isEmpty()) {
+            return true;
+        }
+
+        String busqueda = filtro.trim().toLowerCase();
+
+        for (String campo : campos) {
+            if (campo != null && campo.toLowerCase().contains(busqueda)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

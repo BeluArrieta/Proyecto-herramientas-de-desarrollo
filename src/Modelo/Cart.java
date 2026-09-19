@@ -8,52 +8,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Cart {
-    private int idProducto;
-    private String nombre;
-    private int cantidad;
-    private double precio;
-    private double subtotal;
-
-    public int getIdProducto() {
-        return idProducto;
-    }
-
-    public void setIdProducto(int idProducto) {
-        this.idProducto = idProducto;
-    }
-
-    public String getNombre() {
-        return nombre;
-    }
-
-    public void setNombre(String nombre) {
-        this.nombre = nombre;
-    }
-
-    public int getCantidad() {
-        return cantidad;
-    }
-
-    public void setCantidad(int cantidad) {
-        this.cantidad = cantidad;
-    }
-
-    public double getPrecio() {
-        return precio;
-    }
-
-    public void setPrecio(double precio) {
-        this.precio = precio;
-    }
-
-    public double getSubtotal() {
-        return subtotal;
-    }
-
-    public void setSubtotal(double subtotal) {
-        this.subtotal = subtotal;
-    }
-
     private static List<ItemCarritoDTO> items = new ArrayList<>();
     private static double total = 0.0;
 
@@ -113,11 +67,6 @@ public class Cart {
         } else {
             System.err.println("Indice fuera de rango al intentar eliminar del carrito.");
         }
-    }
-
-    public static void removeProductoById(int idProducto) {
-        items.removeIf(item -> item.getProducto().getIdProducto() == idProducto);
-        recalcularTotal();
     }
 
     public static List<ItemCarritoDTO> getItems() {

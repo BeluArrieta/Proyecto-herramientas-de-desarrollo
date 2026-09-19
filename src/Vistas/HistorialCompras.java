@@ -1,9 +1,8 @@
 package Vistas;
 
-import Config.Conexion;
+import ModeloDAO.BoletaDAO;
 import ModeloDTO.ClienteDTO;
 import java.awt.*;
-import java.sql.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -43,26 +42,24 @@ public class HistorialCompras extends JFrame {
             public boolean isCellEditable(int row, int column) { return false; }
         };
         if (cliente == null) { tabla.setModel(model); return; }
-        String sql = """
-            SELECT v.id_venta, v.fecha_emision, COALESCE(td.nombre, v.id_tipo_documento) documento,
-                   p.nombre producto, dv.cantidad, dv.precio_unitario, dv.subtotal
-            FROM venta v
-            INNER JOIN detalle_venta dv ON v.id_venta = dv.id_venta
-            INNER JOIN producto p ON dv.id_producto = p.id_producto
-            LEFT JOIN tipo_documento td ON v.id_tipo_documento = td.id_documento
-            WHERE v.id_persona = ?
-            ORDER BY v.fecha_emision DESC
-        """;
-        try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-            ps.setString(1, cliente.getIdCliente());
-            ResultSet rs = ps.executeQuery();
-            int c = 0;
-            while (rs.next()) {
-                c++;
-                model.addRow(new Object[]{rs.getString("id_venta"), rs.getTimestamp("fecha_emision"), rs.getString("documento"), rs.getString("producto"), rs.getInt("cantidad"), String.format("S/ %.2f", rs.getDouble("precio_unitario")), String.format("S/ %.2f", rs.getDouble("subtotal"))});
-            }
-            lblTotal.setText("Total registros: " + c);
-        } catch (Exception e) { JOptionPane.showMessageDialog(this, "Error al cargar historial: " + e.getMessage()); }
+
+        BoletaDAO boletaDAO = new BoletaDAO();
+        int c = 0;
+
+        for (Object[] fila : boletaDAO.obtenerHistorialCompras(cliente.getIdCliente())) {
+            c++;
+            model.addRow(new Object[]{
+                fila[0],
+                fila[1],
+                fila[2],
+                fila[3],
+                fila[4],
+                String.format("S/ %.2f", (Double) fila[5]),
+                String.format("S/ %.2f", (Double) fila[6])
+            });
+        }
+
+        lblTotal.setText("Total registros: " + c);
         tabla.setModel(model);
     }
 }

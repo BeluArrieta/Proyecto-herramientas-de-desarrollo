@@ -1,8 +1,7 @@
 package Vistas_administrativas;
 
-import Config.Conexion;
+import ModeloDAO.BoletaDAO;
 import java.awt.*;
-import java.sql.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -59,41 +58,26 @@ public class HistorialGeneralAdmin extends JFrame {
         DefaultTableModel model = new DefaultTableModel(new String[]{"ID Venta", "Fecha", "Cliente", "Documento", "Medio pago", "Producto", "Cantidad", "Precio", "Subtotal"}, 0) {
             public boolean isCellEditable(int row, int column) { return false; }
         };
-        String sql = """
-            SELECT
-                id_venta,
-                fecha_emision,
-                cliente || ' ' || apellido AS cliente,
-                tipo_documento AS documento,
-                medio_pago,
-                producto,
-                cantidad,
-                precio_unitario,
-                subtotal
-            FROM historial_compras
-            WHERE (? = ''
-                OR LOWER(cliente || ' ' || apellido) LIKE LOWER(?)
-                OR LOWER(producto) LIKE LOWER(?)
-                OR LOWER(tipo_documento) LIKE LOWER(?)
-                OR LOWER(medio_pago) LIKE LOWER(?)
-                OR LOWER(id_venta) LIKE LOWER(?))
-            ORDER BY fecha_emision DESC
-        """;
         double total = 0;
         int registros = 0;
-        try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-            String like = "%" + filtro + "%";
-            ps.setString(1, filtro);
-            ps.setString(2, like);
-            ps.setString(3, like);
-            ps.setString(4, like);
-            ps.setString(5, like);
-            ps.setString(6, like);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
+
+        try {
+            BoletaDAO boletaDAO = new BoletaDAO();
+
+            for (Object[] fila : boletaDAO.obtenerHistorialGeneral(filtro)) {
                 registros++;
-                total += rs.getDouble("subtotal");
-                model.addRow(new Object[]{rs.getString("id_venta"), rs.getTimestamp("fecha_emision"), rs.getString("cliente"), rs.getString("documento"), rs.getString("medio_pago"), rs.getString("producto"), rs.getInt("cantidad"), String.format("S/ %.2f", rs.getDouble("precio_unitario")), String.format("S/ %.2f", rs.getDouble("subtotal"))});
+                total += (Double) fila[8];
+                model.addRow(new Object[]{
+                    fila[0],
+                    fila[1],
+                    fila[2],
+                    fila[3],
+                    fila[4],
+                    fila[5],
+                    fila[6],
+                    String.format("S/ %.2f", (Double) fila[7]),
+                    String.format("S/ %.2f", (Double) fila[8])
+                });
             }
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error al cargar historial general: " + e.getMessage());

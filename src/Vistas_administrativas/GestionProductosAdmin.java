@@ -1,8 +1,8 @@
 package Vistas_administrativas;
 
-import Config.Conexion;
+import ModeloDAO.ProductoDAO;
+import ModeloDTO.ProductoDTO;
 import java.awt.*;
-import java.sql.*;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
@@ -70,12 +70,10 @@ public class GestionProductosAdmin extends JFrame {
         DefaultTableModel model = new DefaultTableModel(new String[]{"ID", "Nombre", "Precio", "Stock", "Categoría"}, 0) {
             public boolean isCellEditable(int row, int column) { return false; }
         };
-        String sql = "SELECT id_producto, nombre, precio, stock, categoria FROM producto ORDER BY nombre";
-        try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
-            while (rs.next()) {
-                model.addRow(new Object[]{rs.getInt("id_producto"), rs.getString("nombre"), rs.getDouble("precio"), rs.getInt("stock"), rs.getString("categoria")});
-            }
-        } catch (Exception e) { JOptionPane.showMessageDialog(this, "Error al cargar productos: " + e.getMessage()); }
+        ProductoDAO productoDAO = new ProductoDAO();
+        for (ProductoDTO p : productoDAO.listarTodo()) {
+            model.addRow(new Object[]{p.getIdProducto(), p.getNombre(), p.getPrecio(), p.getStock(), p.getCategoria()});
+        }
         tabla.setModel(model);
     }
 
@@ -99,13 +97,17 @@ public class GestionProductosAdmin extends JFrame {
             int stock = Integer.parseInt(txtStock.getText().trim());
             String categoria = txtCategoria.getText().trim();
             if (nombre.isEmpty()) { JOptionPane.showMessageDialog(this, "Ingrese el nombre del producto."); return; }
-            String sql = "INSERT INTO producto(id_producto, nombre, precio, stock, categoria) VALUES (?, ?, ?, ?, ?)";
-            try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-                ps.setInt(1, id); ps.setString(2, nombre); ps.setDouble(3, precio); ps.setInt(4, stock); ps.setString(5, categoria);
-                ps.executeUpdate();
+
+            ProductoDTO producto = new ProductoDTO(id, nombre, precio, stock);
+            producto.setCategoria(categoria);
+
+            ProductoDAO productoDAO = new ProductoDAO();
+            if (productoDAO.agregar(producto)) {
                 JOptionPane.showMessageDialog(this, "Producto agregado correctamente.");
-                limpiarCampos(); cargarProductos();
+            } else {
+                JOptionPane.showMessageDialog(this, "No se pudo agregar: revise el ID (quizá ya existe).");
             }
+            limpiarCampos(); cargarProductos();
         } catch (Exception e) { JOptionPane.showMessageDialog(this, "No se pudo agregar: " + e.getMessage()); }
     }
 
@@ -116,14 +118,17 @@ public class GestionProductosAdmin extends JFrame {
             double precio = Double.parseDouble(txtPrecio.getText().trim());
             int stock = Integer.parseInt(txtStock.getText().trim());
             String categoria = txtCategoria.getText().trim();
-            String sql = "UPDATE producto SET nombre = ?, precio = ?, stock = ?, categoria = ? WHERE id_producto = ?";
-            try (Connection con = new Conexion().getConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
-                ps.setString(1, nombre); ps.setDouble(2, precio); ps.setInt(3, stock); ps.setString(4, categoria); ps.setInt(5, id);
-                int filas = ps.executeUpdate();
-                if (filas > 0) JOptionPane.showMessageDialog(this, "Producto actualizado correctamente.");
-                else JOptionPane.showMessageDialog(this, "No se encontró el producto.");
-                limpiarCampos(); cargarProductos();
+
+            ProductoDTO producto = new ProductoDTO(id, nombre, precio, stock);
+            producto.setCategoria(categoria);
+
+            ProductoDAO productoDAO = new ProductoDAO();
+            if (productoDAO.actualizar(producto)) {
+                JOptionPane.showMessageDialog(this, "Producto actualizado correctamente.");
+            } else {
+                JOptionPane.showMessageDialog(this, "No se encontró el producto.");
             }
+            limpiarCampos(); cargarProductos();
         } catch (Exception e) { JOptionPane.showMessageDialog(this, "No se pudo actualizar: " + e.getMessage()); }
     }
 

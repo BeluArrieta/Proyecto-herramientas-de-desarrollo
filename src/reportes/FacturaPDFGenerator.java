@@ -3,6 +3,7 @@
  */
 package reportes;
 
+import Modelo.Moneda;
 import ModeloDTO.*;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
@@ -72,17 +73,17 @@ public class FacturaPDFGenerator {
         PdfPTable tbl = new PdfPTable(4);
         tbl.setWidthPercentage(100);
         tbl.setWidths(new float[]{40, 20, 20, 20});
-        addHeader(tbl, "Descripción");
-        addHeader(tbl, "Cantidad");
-        addHeader(tbl, "P. Unitario");
-        addHeader(tbl, "Subtotal");
+        PdfUtil.addHeader(tbl, "Descripción", HEADER);
+        PdfUtil.addHeader(tbl, "Cantidad", HEADER);
+        PdfUtil.addHeader(tbl, "P. Unitario", HEADER);
+        PdfUtil.addHeader(tbl, "Subtotal", HEADER);
 
         for (VentaDTO v : factura.getVentas()) {
             ProductoDTO p = v.getProducto();
             tbl.addCell(new Phrase(p.getNombre(), NORMAL));
             tbl.addCell(new Phrase(String.valueOf(v.getCantidad()), NORMAL));
-            tbl.addCell(new Phrase(String.format("S/ %.2f", v.getPrecioUnitario()), NORMAL));
-            tbl.addCell(new Phrase(String.format("S/ %.2f", v.getCantidad() * v.getPrecioUnitario()), NORMAL));
+            tbl.addCell(new Phrase(Moneda.formatear(v.getPrecioUnitario()), NORMAL));
+            tbl.addCell(new Phrase(Moneda.formatear(v.getCantidad() * v.getPrecioUnitario()), NORMAL));
         }
 
         doc.add(tbl);
@@ -92,12 +93,12 @@ public class FacturaPDFGenerator {
         PdfPTable totales = new PdfPTable(2);
         totales.setWidthPercentage(40);
         totales.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        totales.addCell(celdaSinBorde("SUBTOTAL", HEADER));
-        totales.addCell(celdaSinBorde(String.format("S/ %.2f", factura.getTotal() * 0.82), NORMAL));
-        totales.addCell(celdaSinBorde("IGV (18%)", HEADER));
-        totales.addCell(celdaSinBorde(String.format("S/ %.2f", factura.getTotal() * 0.18), NORMAL));
-        totales.addCell(celdaSinBorde("TOTAL", HEADER));
-        totales.addCell(celdaSinBorde(String.format("S/ %.2f", factura.getTotal()), HEADER));
+        totales.addCell(PdfUtil.celdaSinBorde("SUBTOTAL", HEADER));
+        totales.addCell(PdfUtil.celdaSinBorde(Moneda.formatear(factura.getTotal() * 0.82), NORMAL));
+        totales.addCell(PdfUtil.celdaSinBorde("IGV (18%)", HEADER));
+        totales.addCell(PdfUtil.celdaSinBorde(Moneda.formatear(factura.getTotal() * 0.18), NORMAL));
+        totales.addCell(PdfUtil.celdaSinBorde("TOTAL", HEADER));
+        totales.addCell(PdfUtil.celdaSinBorde(Moneda.formatear(factura.getTotal()), HEADER));
 
         doc.add(totales);
         doc.add(Chunk.NEWLINE);
@@ -106,18 +107,5 @@ public class FacturaPDFGenerator {
         doc.add(new Paragraph("Cancelado: ____________________________", NORMAL));
 
         doc.close();
-    }
-
-    private static void addHeader(PdfPTable t, String txt) {
-        PdfPCell c = new PdfPCell(new Phrase(txt, HEADER));
-        c.setBackgroundColor(BaseColor.LIGHT_GRAY);
-        c.setHorizontalAlignment(Element.ALIGN_CENTER);
-        t.addCell(c);
-    }
-
-    private static PdfPCell celdaSinBorde(String texto, Font fuente) {
-        PdfPCell c = new PdfPCell(new Phrase(texto, fuente));
-        c.setBorder(Rectangle.NO_BORDER);
-        return c;
     }
 }

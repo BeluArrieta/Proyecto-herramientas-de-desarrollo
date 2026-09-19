@@ -1,12 +1,15 @@
 package Modelo;
 
-import Config.Conexion;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
+import Config.ConexionMongo;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.Filters;
+import org.bson.Document;
 
 public class Registro {
 
-    private final Conexion cn = new Conexion();
+    private final MongoCollection<Document> personas = ConexionMongo.getColeccion("personas");
+    private final MongoCollection<Document> usuarios = ConexionMongo.getColeccion("usuarios");
+    private final MongoCollection<Document> clientes = ConexionMongo.getColeccion("clientes");
 
     public boolean registrarUsuario(
             String idPersona,
@@ -17,80 +20,49 @@ public class Registro {
             String usuario,
             String contrasena
     ) {
+
         String contrasenaCifrada = SeguridadContrasena.hash(contrasena);
 
-        String sqlPersona = """
-            INSERT INTO persona(
-                id_persona,
-                nombre,
-                apellido,
-                fecha_nacimiento,
-                correo,
-                telefono,
-                usuario
-            )
-            VALUES (?, ?, ?, NULL, ?, ?, ?)
-        """;
+        try {
 
-        String sqlUsuario = """
-            INSERT INTO usuario(
-                usuario,
-                contrasena,
-                id_persona
-            )
-            VALUES (?, ?, ?)
-        """;
+            personas.insertOne(new Document("_id", idPersona)
+                    .append("nombre", nombre)
+                    .append("apellido", apellido)
+                    .append("fecha_nacimiento", null)
+                    .append("correo", correo)
+                    .append("telefono", telefono)
+                    .append("usuario", usuario));
 
-        String sqlCliente = """
-            INSERT INTO cliente(
-                id_cliente,
-                nombre,
-                apellido,
-                telefono,
-                contrasena,
-                correo
-            )
-            VALUES (?, ?, ?, ?, ?, ?)
-        """;
+            usuarios.insertOne(new Document("_id", usuario)
+                    .append("contrasena", contrasenaCifrada)
+                    .append("id_persona", idPersona));
 
-        try (Connection con = cn.getConexion()) {
-            con.setAutoCommit(false);
+            clientes.insertOne(new Document("_id", idPersona)
+                    .append("nombre", nombre)
+                    .append("apellido", apellido)
+                    .append("telefono", telefono)
+                    .append("correo", correo)
+                    .append("contrasena", contrasenaCifrada));
 
-            try (PreparedStatement psPersona = con.prepareStatement(sqlPersona);
-                 PreparedStatement psUsuario = con.prepareStatement(sqlUsuario);
-                 PreparedStatement psCliente = con.prepareStatement(sqlCliente)) {
+            return true;
 
-                psPersona.setString(1, idPersona);
-                psPersona.setString(2, nombre);
-                psPersona.setString(3, apellido);
-                psPersona.setString(4, correo);
-                psPersona.setString(5, telefono);
-                psPersona.setString(6, usuario);
-                psPersona.executeUpdate();
-
-                psUsuario.setString(1, usuario);
-                psUsuario.setString(2, contrasenaCifrada);
-                psUsuario.setString(3, idPersona);
-                psUsuario.executeUpdate();
-
-                psCliente.setString(1, idPersona);
-                psCliente.setString(2, nombre);
-                psCliente.setString(3, apellido);
-                psCliente.setString(4, telefono);
-                psCliente.setString(5, contrasenaCifrada);
-                psCliente.setString(6, correo);
-                psCliente.executeUpdate();
-
-                con.commit();
-                return true;
-            } catch (Exception e) {
-                con.rollback();
-                return false;
-            } finally {
-                con.setAutoCommit(true);
-            }
         } catch (Exception e) {
-            return false;
+            System.out.println("Error registrar usuario: " + e);
+            deshacerRegistro(idPersona, usuario);
+        }
+
+        return false;
+    }
+
+    // Mejor esfuerzo: si algo falla, se eliminan los documentos ya insertados
+    private void deshacerRegistro(String idPersona, String usuario) {
+
+        try {
+            personas.deleteOne(Filters.eq("_id", idPersona));
+            usuarios.deleteOne(Filters.eq("_id", usuario));
+            clientes.deleteOne(Filters.eq("_id", idPersona));
+        } catch (Exception e) {
+            System.out.println("Error al deshacer registro: " + e);
         }
     }
 }
