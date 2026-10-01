@@ -1,0 +1,4 @@
+/* Login: solo ajustes propios; el resto viene de base.css */
+.page.narrow { min-height: 100vh; }
+.form a { color: var(--color-primario); text-decoration: none; }
+.form a:hover { text-decoration: underline; }
