@@ -1,35 +1,47 @@
 package com.example.proyec_herramientas.persistence;
 
-import org.springframework.data.annotation.Id;
-import org.springframework.data.mongodb.core.mapping.Document;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 
-@Document("productos")
-public class ProductoDocument {
+@Entity
+@Table(name = "producto")
+public class Producto {
 
     @Id
-    private Integer id;
+    @Column(name = "id_producto")
+    private Integer idProducto;
+
+    @Column(name = "nombre", length = 100, nullable = false)
     private String nombre;
+
+    @Column(name = "stock", nullable = false)
     private int stock;
+
+    @Column(name = "precio", nullable = false)
     private double precio;
+
+    @Column(name = "categoria", length = 80, nullable = false)
     private String categoria;
 
-    public ProductoDocument() {
+    public Producto() {
     }
 
-    public ProductoDocument(Integer id, String nombre, int stock, double precio, String categoria) {
-        this.id = id;
+    public Producto(Integer idProducto, String nombre, int stock, double precio, String categoria) {
+        this.idProducto = idProducto;
         this.nombre = nombre;
         this.stock = stock;
         this.precio = precio;
         this.categoria = categoria;
     }
 
-    public Integer getId() {
-        return id;
+    public Integer getIdProducto() {
+        return idProducto;
     }
 
-    public void setId(Integer id) {
-        this.id = id;
+    public void setIdProducto(Integer idProducto) {
+        this.idProducto = idProducto;
     }
 
     public String getNombre() {

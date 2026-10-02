@@ -31,6 +31,15 @@ public class ProductoController {
         return productoService.listar();
     }
 
+    @GetMapping("/{id}")
+    public ProductoDTO obtener(@PathVariable int id) {
+        ProductoDTO producto = productoService.obtenerPorId(id);
+        if (producto == null) {
+            throw new RecursoNoEncontradoException("Producto " + id + " no existe");
+        }
+        return producto;
+    }
+
     @PostMapping
     public ResponseEntity<ProductoDTO> crear(@RequestBody ProductoDTO producto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(productoService.crear(producto));

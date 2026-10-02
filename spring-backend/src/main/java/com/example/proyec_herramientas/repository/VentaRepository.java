@@ -1,15 +1,15 @@
 package com.example.proyec_herramientas.repository;
 
-import com.example.proyec_herramientas.persistence.VentaDocument;
-import org.springframework.data.mongodb.repository.MongoRepository;
+import com.example.proyec_herramientas.persistence.Venta;
+import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface VentaRepository extends MongoRepository<VentaDocument, String> {
+public interface VentaRepository extends JpaRepository<Venta, String> {
 
-    List<VentaDocument> findByTipoDocumentoOrderByFechaEmisionDesc(String tipoDocumento);
+    List<Venta> findByIdTipoDocumentoOrderByFechaEmisionDesc(String idTipoDocumento);
 
-    List<VentaDocument> findByIdPersonaOrderByFechaEmisionDesc(String idPersona);
+    List<Venta> findByIdClienteOrderByFechaEmisionDesc(String idCliente);
 
-    List<VentaDocument> findAllByOrderByFechaEmisionDesc();
+    List<Venta> findAllByOrderByFechaEmisionDesc();
 }

@@ -1,6 +1,6 @@
 package com.example.proyec_herramientas;
 
-import com.example.proyec_herramientas.persistence.ProductoDocument;
+import com.example.proyec_herramientas.persistence.Producto;
 import com.example.proyec_herramientas.repository.ProductoRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.Map;
@@ -24,6 +25,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class ProductoControllerTest {
 
     @Autowired
@@ -42,8 +44,8 @@ class ProductoControllerTest {
 
     @Test
     void listarProductosCatalogo() throws Exception {
-        productoRepository.save(new ProductoDocument(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
-        productoRepository.save(new ProductoDocument(2, "Teclado Mecánico", 5, 120.0, "Accesorios"));
+        productoRepository.save(new Producto(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
+        productoRepository.save(new Producto(2, "Teclado Mecánico", 5, 120.0, "Accesorios"));
 
         mockMvc.perform(get("/productos"))
                 .andExpect(status().isOk())
@@ -65,7 +67,7 @@ class ProductoControllerTest {
 
     @Test
     void crearProductoSinIdAsignaSiguiente() throws Exception {
-        productoRepository.save(new ProductoDocument(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
+        productoRepository.save(new Producto(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
 
         mockMvc.perform(post("/productos")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -76,7 +78,7 @@ class ProductoControllerTest {
 
     @Test
     void actualizarProducto() throws Exception {
-        productoRepository.save(new ProductoDocument(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
+        productoRepository.save(new Producto(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
 
         mockMvc.perform(put("/productos/1")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -97,7 +99,7 @@ class ProductoControllerTest {
 
     @Test
     void eliminarProducto() throws Exception {
-        productoRepository.save(new ProductoDocument(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
+        productoRepository.save(new Producto(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
 
         mockMvc.perform(delete("/productos/1"))
                 .andExpect(status().isNoContent());

@@ -1,9 +1,10 @@
 package com.example.proyec_herramientas.service;
 
 import com.example.proyec_herramientas.model.ProductoDTO;
-import com.example.proyec_herramientas.persistence.ProductoDocument;
+import com.example.proyec_herramientas.persistence.Producto;
 import com.example.proyec_herramientas.repository.ProductoRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ProductoDTO> listar() {
         return repository.findAll().stream()
                 .sorted((a, b) -> a.getNombre().compareToIgnoreCase(b.getNombre()))
@@ -25,69 +27,74 @@ public class ProductoServiceImpl implements ProductoService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ProductoDTO obtenerPorId(int idProducto) {
-        ProductoDocument doc = repository.findById(idProducto).orElse(null);
-        return doc != null ? toDTO(doc) : null;
+        Producto producto = repository.findById(idProducto).orElse(null);
+        return producto != null ? toDTO(producto) : null;
     }
 
     @Override
+    @Transactional
     public ProductoDTO crear(ProductoDTO producto) {
         Integer id = producto.getIdProducto();
         if (id == null || id <= 0) {
             id = siguienteId();
         }
-        ProductoDocument doc = new ProductoDocument(
+        Producto entity = new Producto(
                 id,
                 producto.getNombre(),
                 producto.getStock(),
                 producto.getPrecio(),
                 producto.getCategoria());
-        return toDTO(repository.save(doc));
+        return toDTO(repository.save(entity));
     }
 
     @Override
+    @Transactional
     public ProductoDTO actualizar(int idProducto, ProductoDTO producto) {
-        ProductoDocument doc = repository.findById(idProducto).orElse(null);
-        if (doc == null) {
+        Producto entity = repository.findById(idProducto).orElse(null);
+        if (entity == null) {
             return null;
         }
-        doc.setNombre(producto.getNombre());
-        doc.setStock(producto.getStock());
-        doc.setPrecio(producto.getPrecio());
-        doc.setCategoria(producto.getCategoria());
-        return toDTO(repository.save(doc));
+        entity.setNombre(producto.getNombre());
+        entity.setStock(producto.getStock());
+        entity.setPrecio(producto.getPrecio());
+        entity.setCategoria(producto.getCategoria());
+        return toDTO(repository.save(entity));
     }
 
     @Override
+    @Transactional
     public void eliminar(int idProducto) {
         repository.deleteById(idProducto);
     }
 
     @Override
+    @Transactional
     public boolean actualizarStock(int idProducto, int cantidad) {
-        ProductoDocument doc = repository.findById(idProducto).orElse(null);
-        if (doc == null) {
+        Producto entity = repository.findById(idProducto).orElse(null);
+        if (entity == null) {
             return false;
         }
-        doc.setStock(doc.getStock() - cantidad);
-        repository.save(doc);
+        entity.setStock(entity.getStock() - cantidad);
+        repository.save(entity);
         return true;
     }
 
     private int siguienteId() {
         return repository.findAll().stream()
-                .mapToInt(ProductoDocument::getId)
+                .mapToInt(Producto::getIdProducto)
                 .max()
                 .orElse(0) + 1;
     }
 
-    private ProductoDTO toDTO(ProductoDocument doc) {
+    private ProductoDTO toDTO(Producto producto) {
         ProductoDTO dto = new ProductoDTO();
-        dto.setIdProducto(doc.getId());
-        dto.setNombre(doc.getNombre());
-        dto.setStock(doc.getStock());
-        dto.setPrecio(doc.getPrecio());
-        dto.setCategoria(doc.getCategoria());
+        dto.setIdProducto(producto.getIdProducto());
+        dto.setNombre(producto.getNombre());
+        dto.setStock(producto.getStock());
+        dto.setPrecio(producto.getPrecio());
+        dto.setCategoria(producto.getCategoria());
         return dto;
     }
 }

@@ -1,17 +1,17 @@
 package com.example.proyec_herramientas.service;
 
 import com.example.proyec_herramientas.model.CarritoRequestDTO;
-import com.example.proyec_herramientas.persistence.VentaDocument;
+import com.example.proyec_herramientas.persistence.Venta;
 
 import java.util.List;
 
 public interface VentaService {
 
-    VentaDocument registrarVenta(CarritoRequestDTO carrito);
+    Venta registrarVenta(CarritoRequestDTO carrito);
 
-    VentaDocument obtenerVentaPorId(String idVenta);
+    Venta obtenerVentaPorId(String idVenta);
 
-    List<VentaDocument> obtenerBoletas();
+    List<Venta> obtenerBoletas();
 
-    List<VentaDocument> obtenerHistorial(String idCliente);
+    List<Venta> obtenerHistorial(String idCliente);
 }

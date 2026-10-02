@@ -1,9 +1,10 @@
 package com.example.proyec_herramientas.service;
 
 import com.example.proyec_herramientas.model.ClienteDTO;
-import com.example.proyec_herramientas.persistence.ClienteDocument;
+import com.example.proyec_herramientas.persistence.Cliente;
 import com.example.proyec_herramientas.repository.ClienteRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public List<ClienteDTO> listar() {
         return repository.findAll().stream()
                 .map(this::toDTO)
@@ -24,18 +26,19 @@ public class ClienteServiceImpl implements ClienteService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public ClienteDTO obtenerPorId(String idCliente) {
-        ClienteDocument doc = repository.findById(idCliente).orElse(null);
-        return doc != null ? toDTO(doc) : null;
+        Cliente cliente = repository.findById(idCliente).orElse(null);
+        return cliente != null ? toDTO(cliente) : null;
     }
 
-    private ClienteDTO toDTO(ClienteDocument doc) {
+    private ClienteDTO toDTO(Cliente cliente) {
         ClienteDTO dto = new ClienteDTO();
-        dto.setIdCliente(doc.getId());
-        dto.setNombre(doc.getNombre());
-        dto.setApellido(doc.getApellido());
-        dto.setTelefono(doc.getTelefono());
-        dto.setCorreo(doc.getCorreo());
+        dto.setIdCliente(cliente.getIdCliente());
+        dto.setNombre(cliente.getNombre());
+        dto.setApellido(cliente.getApellido());
+        dto.setTelefono(cliente.getTelefono());
+        dto.setCorreo(cliente.getCorreo());
         return dto;
     }
 }

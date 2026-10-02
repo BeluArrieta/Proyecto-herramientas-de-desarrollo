@@ -6,7 +6,7 @@ import com.example.proyec_herramientas.model.FacturaDTO;
 import com.example.proyec_herramientas.model.ProductoDTO;
 import com.example.proyec_herramientas.model.VentaDTO;
 import com.example.proyec_herramientas.persistence.DetalleVenta;
-import com.example.proyec_herramientas.persistence.VentaDocument;
+import com.example.proyec_herramientas.persistence.Venta;
 import com.example.proyec_herramientas.reportes.BoletaPDFGenerator;
 import com.example.proyec_herramientas.reportes.FacturaPDFGenerator;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ public class ReportePdfServiceImpl implements ReportePdfService {
 
     @Override
     public byte[] generarBoletaPdf(String idVenta) {
-        VentaDocument venta = ventaService.obtenerVentaPorId(idVenta);
+        Venta venta = ventaService.obtenerVentaPorId(idVenta);
         BoletaDTO boleta = new BoletaDTO(
                 venta.getNumeroDocumento(),
                 venta.getFechaEmision(),
@@ -41,7 +41,7 @@ public class ReportePdfServiceImpl implements ReportePdfService {
 
     @Override
     public byte[] generarFacturaPdf(String idVenta) {
-        VentaDocument venta = ventaService.obtenerVentaPorId(idVenta);
+        Venta venta = ventaService.obtenerVentaPorId(idVenta);
         FacturaDTO factura = new FacturaDTO(
                 venta.getNumeroDocumento(),
                 venta.getFechaEmision(),
@@ -54,8 +54,8 @@ public class ReportePdfServiceImpl implements ReportePdfService {
         }
     }
 
-    private ClienteDTO toClienteDTO(VentaDocument venta) {
-        ClienteDTO cliente = clienteService.obtenerPorId(venta.getIdPersona());
+    private ClienteDTO toClienteDTO(Venta venta) {
+        ClienteDTO cliente = clienteService.obtenerPorId(venta.getIdCliente());
         if (cliente != null) {
             return cliente;
         }
@@ -72,7 +72,7 @@ public class ReportePdfServiceImpl implements ReportePdfService {
         return fallback;
     }
 
-    private List<VentaDTO> toVentasDTO(VentaDocument venta) {
+    private List<VentaDTO> toVentasDTO(Venta venta) {
         return venta.getDetalles().stream()
                 .map(this::toVentaDTO)
                 .toList();

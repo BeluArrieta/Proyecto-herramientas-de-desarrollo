@@ -1,6 +1,6 @@
 package com.example.proyec_herramientas.controller;
 
-import com.example.proyec_herramientas.persistence.VentaDocument;
+import com.example.proyec_herramientas.persistence.Venta;
 import com.example.proyec_herramientas.service.ReportePdfService;
 import com.example.proyec_herramientas.service.VentaService;
 import org.springframework.http.HttpHeaders;
@@ -27,12 +27,12 @@ public class BoletaController {
     }
 
     @GetMapping("/boletas")
-    public List<VentaDocument> boletas() {
+    public List<Venta> boletas() {
         return ventaService.obtenerBoletas();
     }
 
     @GetMapping("/historial")
-    public List<VentaDocument> historial(@RequestParam(required = false) String clienteId) {
+    public List<Venta> historial(@RequestParam(required = false) String clienteId) {
         return ventaService.obtenerHistorial(clienteId);
     }
 

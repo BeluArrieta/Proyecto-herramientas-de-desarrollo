@@ -1,8 +1,10 @@
 package com.example.proyec_herramientas;
 
-import com.example.proyec_herramientas.persistence.ClienteDocument;
-import com.example.proyec_herramientas.persistence.ProductoDocument;
+import com.example.proyec_herramientas.persistence.Cliente;
+import com.example.proyec_herramientas.persistence.Persona;
+import com.example.proyec_herramientas.persistence.Producto;
 import com.example.proyec_herramientas.repository.ClienteRepository;
+import com.example.proyec_herramientas.repository.PersonaRepository;
 import com.example.proyec_herramientas.repository.ProductoRepository;
 import com.example.proyec_herramientas.repository.VentaRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -12,6 +14,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -29,6 +32,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @SpringBootTest
 @AutoConfigureMockMvc
+@ActiveProfiles("test")
 class VentaControllerTest {
 
     @Autowired
@@ -44,6 +48,9 @@ class VentaControllerTest {
     private ClienteRepository clienteRepository;
 
     @Autowired
+    private PersonaRepository personaRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
@@ -51,9 +58,12 @@ class VentaControllerTest {
         ventaRepository.deleteAll();
         productoRepository.deleteAll();
         clienteRepository.deleteAll();
-        productoRepository.save(new ProductoDocument(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
-        productoRepository.save(new ProductoDocument(2, "Teclado Mecánico", 5, 120.0, "Accesorios"));
-        clienteRepository.save(new ClienteDocument("CLI-0001", "Juan", "Pérez", "987654321", "juan@correo.com"));
+        personaRepository.deleteAll();
+
+        productoRepository.save(new Producto(1, "Mouse Gamer", 8, 50.0, "Accesorios"));
+        productoRepository.save(new Producto(2, "Teclado Mecánico", 5, 120.0, "Accesorios"));
+        clienteRepository.save(new Cliente("CLI-0001", "Juan", "Pérez", "987654321", "juan@correo.com"));
+        personaRepository.save(persona("PER001", "Juan", "Pérez", "juan@correo.com"));
     }
 
     @Test
@@ -63,8 +73,11 @@ class VentaControllerTest {
                         .content(carrito("CLI-0001", "Boleta", "Yape", List.of(
                                 item(1, 2), item(2, 1)))))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.idTipoDocumento", is("TD001")))
                 .andExpect(jsonPath("$.tipoDocumento", is("Boleta")))
                 .andExpect(jsonPath("$.numeroDocumento", is("BOL-000001")))
+                .andExpect(jsonPath("$.idMedioPago", is("MP004")))
+                .andExpect(jsonPath("$.medioPago", is("Yape")))
                 .andExpect(jsonPath("$.cliente", is("Juan Pérez")))
                 .andExpect(jsonPath("$.total", is(220.0)))
                 .andExpect(jsonPath("$.detalles", hasSize(2)))
@@ -77,6 +90,9 @@ class VentaControllerTest {
         mockMvc.perform(post("/ventas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(carrito("CLI-0001", "Boleta", "Yape", List.of(item(1, 1)))));
+        mockMvc.perform(post("/ventas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(carrito("CLI-0001", "Factura", "Efectivo", List.of(item(1, 1)))));
 
         mockMvc.perform(get("/boletas"))
                 .andExpect(status().isOk())
@@ -99,7 +115,8 @@ class VentaControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(1)))
                 .andExpect(jsonPath("$[0].id", is(idVenta)))
-                .andExpect(jsonPath("$[0].cliente", is("Juan Pérez")));
+                .andExpect(jsonPath("$[0].cliente", is("Juan Pérez")))
+                .andExpect(jsonPath("$[0].detalles[0].producto", is("Mouse Gamer")));
     }
 
     @Test
@@ -115,10 +132,26 @@ class VentaControllerTest {
     }
 
     @Test
+    void ventaSinClienteDevuelve400() throws Exception {
+        mockMvc.perform(post("/ventas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(carrito("  ", "Boleta", "Yape", List.of(item(1, 1)))))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void ventaConClienteDesconocidoDevuelve404() throws Exception {
+        mockMvc.perform(post("/ventas")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(carrito("CLI-9999", "Boleta", "Yape", List.of(item(1, 1)))))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
     void ventaDescartaElStock() throws Exception {
         mockMvc.perform(post("/ventas")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(carrito("CLI-0001", "Boleta", "Yape", List.of(item(1, 2)))));
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(carrito("CLI-0001", "Boleta", "Yape", List.of(item(1, 2)))));
 
         mockMvc.perform(get("/productos/1"))
                 .andExpect(status().isOk())
@@ -151,6 +184,17 @@ class VentaControllerTest {
         byte[] bytes = pdf.getResponse().getContentAsByteArray();
         assertTrue(bytes.length > 1000, "El PDF debe tener contenido");
         assertTrue(new String(bytes, 0, 4).startsWith("%PDF"), "Debe ser un PDF válido");
+    }
+
+    private Persona persona(String idPersona, String nombre, String apellido, String correo) {
+        Persona persona = new Persona();
+        persona.setIdPersona(idPersona);
+        persona.setNombre(nombre);
+        persona.setApellido(apellido);
+        persona.setCorreo(correo);
+        persona.setTelefono("987654321");
+        persona.setUsuario(nombre.toLowerCase());
+        return persona;
     }
 
     private String carrito(String idCliente, String tipoDocumento, String medioPago, List<Map<String, Object>> items) throws Exception {

@@ -1,7 +1,7 @@
 package com.example.proyec_herramientas.controller;
 
 import com.example.proyec_herramientas.model.CarritoRequestDTO;
-import com.example.proyec_herramientas.persistence.VentaDocument;
+import com.example.proyec_herramientas.persistence.Venta;
 import com.example.proyec_herramientas.service.VentaService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -22,7 +22,7 @@ public class VentaController {
     }
 
     @PostMapping
-    public ResponseEntity<VentaDocument> registrar(@Valid @RequestBody CarritoRequestDTO carrito) {
+    public ResponseEntity<Venta> registrar(@Valid @RequestBody CarritoRequestDTO carrito) {
         return ResponseEntity.status(HttpStatus.CREATED).body(ventaService.registrarVenta(carrito));
     }
 }
